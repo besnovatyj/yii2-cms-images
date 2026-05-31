@@ -1,0 +1,28 @@
+{
+  "name": "besnovatyj/yii2-cms-images",
+  "description": "Переиспользуемый пакет управления изображениями для Yii2 CMS модулей",
+  "version": "1.0.0",
+  "type": "yii2-extension",
+  "license": "MIT",
+  "minimum-stability": "stable",
+  "keywords": ["yii2", "images", "upload", "cms"],
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "yiisoft/yii2-composer": true
+    },
+    "fxp-asset": {
+      "enabled": false
+    }
+  },
+  "require": {
+    "php": ">=8.4",
+    "yiisoft/yii2": "~2.0.0",
+    "yiisoft/yii2-bootstrap5": "~2.0.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Besnovatyj\\Images\\": "src/"
+    }
+  }
+}

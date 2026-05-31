@@ -1,0 +1,26 @@
+{
+    "name": "yii2-cms-gallery-upload-widget",
+    "version": "1.0.0",
+    "description": "Gallery upload widget for Yii2-cms",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "node esbuild.config.js",
+        "watch": "node esbuild.config.js --watch",
+        "clean": "rm -rf dist"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+        "@eslint/js": "^9.15.0",
+        "esbuild": "0.25.4",
+        "globals": "^15.12.0",
+        "typescript": "^5.7.0",
+        "typescript-eslint": "^8.16.0"
+    },
+    "engines": {
+        "node": ">= 23.3.0",
+        "npm": ">= 10.0.0"
+    }
+}

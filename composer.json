@@ -5,6 +5,11 @@
   "type": "yii2-extension",
   "license": "MIT",
   "minimum-stability": "stable",
+  "extra": {
+    "bescms": {
+      "kind": "package"
+    }
+  },
   "keywords": ["yii2", "images", "upload", "cms"],
   "config": {
     "sort-packages": true,

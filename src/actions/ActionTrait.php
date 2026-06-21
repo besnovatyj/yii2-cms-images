@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace Besnovatyj\Images\actions;
 
-use common\components\controller\ControllerTrait;
 use Throwable;
 use Yii;
 use yii\web\Response;
@@ -17,29 +16,27 @@ use yii\web\Response;
 /**
  * Вспомогательные методы для image standalone actions.
  *
- * Предоставляет единообразный формат JSON-ответов и проверку Fetch-запросов.
+ * Предоставляет единообразный формат JSON-ответов и проверку Ajax-запросов.
  */
 trait ActionTrait
 {
     /**
-     * Проверяет что запрос отправлен через Fetch API виджета.
-     *
-     * @see ControllerTrait::isFetchRequest()
+     * Проверяет что запрос отправлен через Ajax API виджета.
      */
-    private function isFetchRequest(): bool
+    private function isAjax(): bool
     {
-        return Yii::$app->request->headers->get('X-Requested-With-Fetch') === 'true';
+        return Yii::$app->getRequest()->getIsAjax();
     }
 
     /**
-     * Устанавливает формат ответа JSON и возвращает ошибку запроса Fetch.
+     * Устанавливает формат ответа JSON и возвращает ошибку запроса Ajax.
      *
      * @return array{status: string, message: string}
      */
-    private function requireFetchRequest(): array
+    private function requireAjax(): array
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
-        return ['status' => 'error', 'message' => 'Request must be Fetch'];
+        return ['status' => 'error', 'message' => 'Request must be Ajax'];
     }
 
     /**

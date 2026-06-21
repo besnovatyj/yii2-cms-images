@@ -20,7 +20,7 @@ use yii\web\Response;
 /**
  * Standalone action загрузки одного изображения.
  *
- * Обрабатывает Fetch POST-запрос от виджета загрузки.
+ * Обрабатывает Ajax POST-запрос от виджета загрузки.
  * Открывает транзакцию, применяет pessimistic lock через ownerResolver
  * (для Gallery — реальная блокировка, для других модулей — no-op),
  * сохраняет изображение и обновляет main_image_id если он ещё не установлен.
@@ -64,8 +64,8 @@ class UploadImageAction extends Action
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        if (!$this->isFetchRequest()) {
-            return $this->requireFetchRequest();
+        if (!$this->isAjax()) {
+            return $this->requireAjax();
         }
 
         $form = new UploadImageForm();

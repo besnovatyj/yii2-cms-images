@@ -201,7 +201,7 @@ src/
   forms/
     UploadImageForm.php             # Форма загрузки (formName = 'AddImageForm')
   actions/
-    ActionTrait.php                 # isFetchRequest(), errorResponse()
+    ActionTrait.php                 # isAjax(), errorResponse()
     UploadImageAction.php           # POST add-image
     DeleteImageAction.php           # POST delete-image
     GetImagesAction.php             # POST get-images
@@ -221,7 +221,7 @@ src/
 
 ## API Actions
 
-Все actions принимают запросы с заголовком `X-Requested-With-Fetch: true`.
+Все actions принимают запросы с заголовком `X-Requested-With' === 'XMLHttpRequest`.
 
 | Action           | POST-параметры                                           | Описание                    |
 |------------------|----------------------------------------------------------|-----------------------------|

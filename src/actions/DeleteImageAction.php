@@ -53,8 +53,8 @@ class DeleteImageAction extends Action
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        if (!$this->isFetchRequest()) {
-            return $this->requireFetchRequest();
+        if (!$this->isAjax()) {
+            return $this->requireAjax();
         }
 
         $ownerId  = (int) Yii::$app->request->post('DeleteImageForm')['id'];

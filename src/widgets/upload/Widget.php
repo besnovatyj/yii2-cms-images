@@ -64,7 +64,6 @@ class Widget extends BaseWidget
             'headers' => [
                 'x-csrf-token'           => Yii::$app->request->getCsrfToken(), // Yii2 CSRF protect
                 'X-Requested-With'       => 'XMLHttpRequest', // Detect Ajax in Yii2
-                'X-Requested-With-Fetch' => true, // @see ActionTrait::isFetchRequest()
             ],
             'ownerId'   => $this->ownerId,
             'endpoints' => $this->endpoints,

@@ -8,7 +8,7 @@
 
 ## Возможности
 
-- **`BaseImage`** — абстрактный ActiveRecord с настроенным `ImageUploadBehavior` (оригиналы + миниатюры по профилям)
+- **`BaseImage`** — абстрактный ActiveRecord с настроенным `UploadBehavior` (оригиналы + миниатюры по профилям)
 - **5 standalone actions** — загрузка, удаление, список, сортировка, главное изображение
 - **AJAX-виджет** — drag-and-drop загрузка, сортировка, превью, параллельные загрузки
 - **Pessimistic lock** — защита от race condition при параллельной загрузке (через `ImageOwnerInterface`)
@@ -194,7 +194,7 @@ class GalleryImageOwner implements ImageOwnerInterface
 ```
 src/
   base/
-    BaseImage.php                   # Абстрактный AR с ImageUploadBehavior
+    BaseImage.php                   # Абстрактный AR с UploadBehavior
   contracts/
     ImageOwnerInterface.php         # Контракт адаптера владельца
     NullImageOwnerTrait.php         # No-op реализации lock/refresh
@@ -273,7 +273,7 @@ src/
 |------------------------|------------|-----------------------------------------------|
 | `getParentAttribute()` | `string`   | Имя FK-атрибута (`gallery_id`, `person_id`)   |
 | `getStorageName()`     | `string`   | Поддиректория хранилища (`Gallery`, `Person`) |
-| `getThumbProfiles()`   | `array`    | Профили миниатюр для ImageUploadBehavior      |
+| `getThumbProfiles()`   | `array`    | Профили миниатюр для UploadBehavior           |
 | `tableName()`          | `string`   | Имя таблицы БД                                |
 
 Публичные методы:
@@ -315,4 +315,5 @@ ImageActionsMap::get(
 - PHP >= 8.4
 - yiisoft/yii2 ~2.0.0
 - yiisoft/yii2-bootstrap5 ~2.0.0
-- `common\components\upload\behaviors\ImageUploadBehavior` (из хост-приложения)
+- `besnovatyj/yii2-cms-upload` — `BaseImage` конфигурирует `Besnovatyj\Upload\heap\UploadBehavior`
+  (оригиналы + миниатюры через `ThumbnailProfile`)

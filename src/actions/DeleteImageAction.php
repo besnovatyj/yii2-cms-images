@@ -21,7 +21,7 @@ use yii\web\Response;
  * Standalone action удаления изображения.
  *
  * Находит изображение среди изображений владельца, удаляет его
- * (ImageUploadBehavior автоматически удаляет файл и миниатюры),
+ * (UploadBehavior автоматически удаляет файл и миниатюры),
  * и обновляет main_image_id если удалённое было главным.
  *
  * Ожидает POST-параметры: DeleteImageForm[id], DeleteImageForm[imageId].

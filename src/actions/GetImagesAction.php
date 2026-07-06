@@ -44,7 +44,7 @@ class GetImagesAction extends Action
     public $ownerResolver;
 
     /**
-     * Профиль миниатюры ImageUploadBehavior для поля previewUrl.
+     * Профиль миниатюры UploadBehavior для поля previewUrl.
      *
      * Должен совпадать с одним из ключей getThumbProfiles() в imageClass.
      */

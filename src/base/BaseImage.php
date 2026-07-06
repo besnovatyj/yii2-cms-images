@@ -12,14 +12,13 @@ namespace Besnovatyj\Images\base;
 use Besnovatyj\Upload\heap\ThumbnailMode;
 use Besnovatyj\Upload\heap\ThumbnailProfile;
 use Besnovatyj\Upload\heap\UploadBehavior;
-use common\components\upload\behaviors\ImageUploadBehavior;
 use yii\db\ActiveRecord;
 use yii\web\UploadedFile;
 
 /**
  * Базовый абстрактный ActiveRecord для изображений.
  *
- * Автоматически конфигурирует ImageUploadBehavior на основе
+ * Автоматически конфигурирует UploadBehavior на основе
  * абстрактных методов дочернего класса. Дочерний класс обязан реализовать:
  * - getParentAttribute(): string  — имя FK-атрибута ('gallery_id', 'person_id')
  * - getStorageName(): string      — имя поддиректории хранилища ('Gallery', 'Person')
@@ -88,9 +87,13 @@ abstract class BaseImage extends ActiveRecord
     abstract protected static function getStorageName(): string;
 
     /**
-     * Конфигурация профилей миниатюр для ImageUploadBehavior.
+     * Конфигурация профилей миниатюр для UploadBehavior.
      *
-     * @return array<string, array{width: int, height: int, thumbsType?: string}>
+     * Ключ массива — имя профиля; значение маппится в {@see ThumbnailProfile}:
+     * `width`/`height` обязательны, `quality` (по умолчанию 80) и `mode`
+     * ({@see ThumbnailMode}, по умолчанию Resize) — опциональны.
+     *
+     * @return array<string, array{width: int, height: int, quality?: int, mode?: ThumbnailMode}>
      */
     abstract protected static function getThumbProfiles(): array;
 
@@ -137,16 +140,6 @@ abstract class BaseImage extends ActiveRecord
         }
 
         return [
-//            [
-//                'class' => ImageUploadBehavior::class,
-//                'attribute' => 'file',
-//                'filePath' => "@static/origin/{$storage}/[[attribute_{$parentAttr}]]/[[id]].[[extension]]",
-//                'fileUrl' => "@staticHostName/origin/{$storage}/[[attribute_{$parentAttr}]]/[[id]].[[extension]]",
-//                'thumbPath' => "@static/cache/{$storage}/[[attribute_{$parentAttr}]]/[[profile]]_[[id]].[[extension]]",
-//                'thumbUrl' => "@staticHostName/cache/{$storage}/[[attribute_{$parentAttr}]]/[[profile]]_[[id]].[[extension]]",
-//                'thumbs' => static::getThumbProfiles(),
-//            ],
-
             'photoUpload' => [
                 'class' => UploadBehavior::class,
                 'attribute' => 'file',

@@ -34,16 +34,31 @@ use yii\helpers\Json;
  *         'deleteImage'  => Url::to(['/Module/backend/controller/delete-image'], true),
  *         'setMainImage' => Url::to(['/Module/backend/controller/set-main-image'], true),
  *     ],
+ *     'previewFit' => Widget::PREVIEW_FIT_CONTAIN, // необязательно; по умолчанию cover
  * ]) ?>
  * ```
  *
- * @property int|string|null $ownerId   ID владельца (gallery_id, person_id и т.д.)
- * @property array           $endpoints Эндпойнты для запросов к бэкенду
+ * @property int|string|null $ownerId    ID владельца (gallery_id, person_id и т.д.)
+ * @property array           $endpoints  Эндпойнты для запросов к бэкенду
+ * @property string          $previewFit Способ вписывания превью в квадрат ячейки:
+ *                                       'cover' — заполнить с обрезкой, 'contain' — вписать целиком
  */
 class Widget extends BaseWidget
 {
+    /** Превью заполняет квадрат ячейки с обрезкой краёв. */
+    public const PREVIEW_FIT_COVER = 'cover';
+    /** Превью вписывается в квадрат ячейки целиком (возможны поля по краям). */
+    public const PREVIEW_FIT_CONTAIN = 'contain';
+
     public null|int|string $ownerId = null;
     public array $endpoints = [];
+
+    /**
+     * Способ отображения превью в сетке. Одно из PREVIEW_FIT_* (по умолчанию cover).
+     *
+     * @var string
+     */
+    public string $previewFit = self::PREVIEW_FIT_COVER;
 
     /**
      * {@inheritdoc}
@@ -57,6 +72,9 @@ class Widget extends BaseWidget
         }
         if (!$this->ownerId) {
             throw new InvalidConfigException('ownerId is required');
+        }
+        if (!in_array($this->previewFit, [self::PREVIEW_FIT_COVER, self::PREVIEW_FIT_CONTAIN], true)) {
+            throw new InvalidConfigException("previewFit must be '" . self::PREVIEW_FIT_COVER . "' or '" . self::PREVIEW_FIT_CONTAIN . "'");
         }
 
         $config = [
@@ -75,6 +93,7 @@ class Widget extends BaseWidget
                 'setMainImageForm' => 'SetMainImageForm',
             ],
             'imageScale' => 0.95, // размер каждого изображения в сетке виджета
+            'previewFit' => $this->previewFit, // 'cover' (заполнить) | 'contain' (вписать)
             'maxWidth'   => 5000, // максимальная ширина изображения в пикселях
             'maxHeight'  => 5000, // максимальная высота изображения в пикселях
         ];

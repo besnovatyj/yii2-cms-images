@@ -3,7 +3,7 @@
  */
 
 import Dispatcher from "@/Dispatcher";
-import type {ServerImage, UploadImage} from "@/types";
+import type {PreviewFit, ServerImage, UploadImage} from "@/types";
 
 /**
  * Фабрика элементов изображений.
@@ -11,10 +11,11 @@ import type {ServerImage, UploadImage} from "@/types";
  * ImageElementFactory отвечает только за структуру и CSS-классы.
  */
 export default class ImageElementFactory {
-    static createImageElement(image: ServerImage | UploadImage, imageSize: number, dispatcher: Dispatcher, existingElement: HTMLElement | null = null): HTMLElement {
+    static createImageElement(image: ServerImage | UploadImage, imageSize: number, dispatcher: Dispatcher, existingElement: HTMLElement | null = null, previewFit: PreviewFit = 'cover'): HTMLElement {
         const imgEl = ImageElementFactory.createContainer(image, existingElement);
-        ImageElementFactory.updateImage(imgEl, image);
+        ImageElementFactory.updateImage(imgEl, image, previewFit);
         ImageElementFactory.createMainImageButton(imgEl, image, dispatcher);
+        ImageElementFactory.createDragHandle(imgEl);
         ImageElementFactory.createDeleteButton(imgEl, image, dispatcher);
         return imgEl;
     }
@@ -34,7 +35,7 @@ export default class ImageElementFactory {
      * Создание или обновление тега img.
      * Перед перезаписью src — вызывается URL.revokeObjectURL() для предотвращения утечки памяти (P1 #6).
      */
-    private static updateImage(container: HTMLElement, image: ServerImage | UploadImage): void {
+    private static updateImage(container: HTMLElement, image: ServerImage | UploadImage, previewFit: PreviewFit = 'cover'): void {
         let imgTag = container.querySelector('img') as HTMLImageElement | null;
         if (!imgTag) {
             imgTag = document.createElement('img');
@@ -57,7 +58,8 @@ export default class ImageElementFactory {
         }
         imgTag.style.width = '100%';
         imgTag.style.height = '100%';
-        imgTag.style.objectFit = 'cover';
+        // 'cover' — заполнить квадрат с обрезкой; 'contain' — вписать целиком (поля по краям)
+        imgTag.style.objectFit = previewFit;
         imgTag.style.display = 'block';
     }
 
@@ -88,6 +90,32 @@ export default class ImageElementFactory {
 
         // Обновляем CSS-класс в зависимости от статуса главного изображения
         starBtn.classList.toggle('is-main', (image as ServerImage).isMain);
+    }
+
+    /**
+     * Создание маркера-ручки перетаскивания (низ-слева, зеркально кнопке удаления).
+     * На десктопе перетаскивается вся карточка (draggable=true), ручка — визуальная
+     * подсказка и второй способ. На тач-устройствах перетаскивание стартует ТОЛЬКО
+     * с этой ручки (см. DragAndDropManager), поэтому касание тела карточки на мобилке
+     * прокручивает страницу, а не начинает drag.
+     */
+    private static createDragHandle(container: HTMLElement): void {
+        if (container.querySelector('.drag-handle')) return; // Ручка уже существует
+
+        const handle = document.createElement('button');
+        handle.className = 'drag-handle';
+        handle.type = 'button';
+        handle.title = 'Перетащите для изменения порядка';
+        handle.setAttribute('aria-label', 'Перетащить для сортировки');
+        handle.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">' +
+            '<path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>' +
+            '</svg>';
+        container.appendChild(handle);
+        // Ручка — только для перетаскивания: гасим click, чтобы случайный тап не всплывал.
+        handle.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
     }
 
     /** Создание кнопки удаления */

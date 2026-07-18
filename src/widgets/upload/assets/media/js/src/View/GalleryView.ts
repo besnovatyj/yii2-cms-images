@@ -9,6 +9,7 @@ import {ControlsComponent} from "@/View/ControlsComponent";
 import ImageListComponent from "@/View/ImageListComponent";
 import PreloaderComponent from "@/View/PreloaderComponent";
 import TopProgressBar from "@/View/TopProgressBar";
+import type {PreviewFit} from "@/types";
 
 export default class GalleryView {
     private container: HTMLElement;
@@ -22,12 +23,13 @@ export default class GalleryView {
     constructor(
         containerId: string,
         private dispatcher: Dispatcher,
-        imageScale: number
+        imageScale: number,
+        previewFit: PreviewFit = 'cover'
     ) {
         this.container = document.getElementById(containerId)!;
         this.container.innerHTML = '';
         this.applyContainerStyles();
-        this.setupComponents(imageScale);
+        this.setupComponents(imageScale, previewFit);
     }
 
     /** Инжектируем базовые стили во внешний контейнер виджета */
@@ -46,12 +48,12 @@ export default class GalleryView {
         this.container.style.gap = '0';
     }
 
-    private setupComponents(imageScale: number) {
+    private setupComponents(imageScale: number, previewFit: PreviewFit) {
         this.topBar = new TopProgressBar();
         const controls = new ControlsComponent(this.dispatcher);
         const dropZone = new DropZone(this.dispatcher);
-        this.serverImageList = new ImageListComponent(this.dispatcher, 'server', imageScale, 'В галерее');
-        this.uploadImageList = new ImageListComponent(this.dispatcher, 'upload', imageScale, 'Выбрано для загрузки');
+        this.serverImageList = new ImageListComponent(this.dispatcher, 'server', imageScale, 'В галерее', previewFit);
+        this.uploadImageList = new ImageListComponent(this.dispatcher, 'upload', imageScale, 'Выбрано для загрузки', previewFit);
         this.preloader = new PreloaderComponent();
 
         // Секция загрузки: дропзона + очередь + кнопки — всё рядом

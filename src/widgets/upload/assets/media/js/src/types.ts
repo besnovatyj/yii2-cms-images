@@ -4,6 +4,12 @@
 
 // types.ts — модульные типы виджета галереи
 
+/**
+ * Способ вписывания превью в квадрат ячейки грида.
+ * 'cover' — заполнить с обрезкой краёв; 'contain' — вписать целиком (возможны поля).
+ */
+export type PreviewFit = 'cover' | 'contain';
+
 /** Конфигурация для глобальной функции showAlert */
 export interface ShowAlertConfig {
     message: string; // Текст сообщения (обязательное поле)

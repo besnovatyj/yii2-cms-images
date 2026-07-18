@@ -5,11 +5,12 @@
 import {DragAndDropManager} from "@/View/DragAndDropManager";
 import ImageElementFactory from "@/View/ImageElementFactory";
 import Dispatcher from "@/Dispatcher";
-import type {ServerImage, UploadImage} from "@/types";
+import type {PreviewFit, ServerImage, UploadImage} from "@/types";
 
 export default class ImageListComponent extends HTMLElement {
     private dragAndDropManager: DragAndDropManager;
     private readonly imageSize: number; // Размер одного изображения в пикселях
+    private readonly previewFit: PreviewFit; // Способ вписывания превью в ячейку
     private readonly container: HTMLElement;
     private readonly sectionLabel: HTMLElement;
 
@@ -17,9 +18,11 @@ export default class ImageListComponent extends HTMLElement {
         private dispatcher: Dispatcher,
         private type: 'server' | 'upload',
         imageScale: number = 1.0,  // Коэффициент масштабирования (по умолчанию 1.0)
-        label: string = ''
+        label: string = '',
+        previewFit: PreviewFit = 'cover'
     ) {
         super();
+        this.previewFit = previewFit;
         this.imageSize = 100 * imageScale; // Базовый размер 100px, умноженный на коэффициент
         // CSS-переменная для grid-template-columns — используется в shadow DOM стилях
         this.style.setProperty('--image-size', `${this.imageSize}px`);
@@ -101,7 +104,8 @@ export default class ImageListComponent extends HTMLElement {
 
             /* === Кнопки действий === */
             .main-image-btn,
-            .delete-btn {
+            .delete-btn,
+            .drag-handle {
                 position: absolute;
                 opacity: 0;
                 transition: opacity 0.18s ease, transform 0.18s ease, background 0.15s ease;
@@ -116,7 +120,8 @@ export default class ImageListComponent extends HTMLElement {
                 -webkit-backdrop-filter: blur(6px);
             }
             .gallery-image:hover .main-image-btn,
-            .gallery-image:hover .delete-btn {
+            .gallery-image:hover .delete-btn,
+            .gallery-image:hover .drag-handle {
                 opacity: 1;
                 transform: scale(1);
             }
@@ -143,7 +148,8 @@ export default class ImageListComponent extends HTMLElement {
             /* На тач-устройствах hover недоступен — кнопки всегда видны */
             @media (hover: none), (pointer: coarse) {
                 .main-image-btn,
-                .delete-btn {
+                .delete-btn,
+                .drag-handle {
                     opacity: 1 !important;
                     transform: scale(1) !important;
                 }
@@ -158,6 +164,24 @@ export default class ImageListComponent extends HTMLElement {
             }
             .delete-btn:hover {
                 background: rgba(239,68,68,0.92) !important;
+            }
+
+            /* Маркер перетаскивания — низ-слева, зеркально кнопке удаления.
+               На тач-устройствах именно с него начинается перетаскивание (см.
+               DragAndDropManager): касание тела карточки при этом скроллит страницу. */
+            .drag-handle {
+                bottom: 5px;
+                left: 5px;
+                background: rgba(17,24,39,0.45);
+                color: #fff;
+                cursor: grab;
+                touch-action: none; /* палец на ручке не инициирует скролл/зум браузера */
+            }
+            .drag-handle:active {
+                cursor: grabbing;
+            }
+            .drag-handle:hover {
+                background: rgba(59,130,246,0.92) !important;
             }
 
         `;
@@ -194,7 +218,7 @@ export default class ImageListComponent extends HTMLElement {
             const existingElement = existingElements.get(img.id.toString());
             // Если существует `existingElement`, то обновляет его, если нет возвращает новый заполненный элемент.
             const imgEl = ImageElementFactory.createImageElement(
-                img, this.imageSize, this.dispatcher, existingElement as HTMLElement
+                img, this.imageSize, this.dispatcher, existingElement as HTMLElement, this.previewFit
             );
             // Если в компоненте не было элемента с ID из модели (состояния) - `existingElement`, значит добавляем вновь созданный
             if (!existingElement) {

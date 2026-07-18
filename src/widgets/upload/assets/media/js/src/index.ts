@@ -8,6 +8,7 @@ import GalleryController from "@/GalleryController";
 import GalleryState from "@/GalleryState";
 import GalleryService from "@/GalleryService";
 import GalleryView from "@/View/GalleryView";
+import type {PreviewFit} from "@/types";
 
 // Main function to create the widget
 export function createGalleryWidget(options: {
@@ -17,6 +18,7 @@ export function createGalleryWidget(options: {
     endpoints: { getImages: string; deleteImage: string; setNewSort: string; upload: string; setMainImage: string };
     formNames: Record<string, string>;
     imageScale?: number;
+    previewFit?: PreviewFit; // Способ вписывания превью: 'cover' (заполнить) | 'contain' (вписать)
     maxWidth?: number; // Максимальная ширина изображения
     maxHeight?: number; // Максимальная высота изображения
 }) {
@@ -35,7 +37,7 @@ export function createGalleryWidget(options: {
         options.formNames.uploadImageForm,
         3,
     );
-    const view = new GalleryView(options.containerId, dispatcher, options.imageScale || 1.0);
+    const view = new GalleryView(options.containerId, dispatcher, options.imageScale || 1.0, options.previewFit || 'cover');
     const controller = new GalleryController(state, view, service, fileUploader, dispatcher);
     controller.init();
 }

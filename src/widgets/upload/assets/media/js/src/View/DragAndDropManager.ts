@@ -158,6 +158,11 @@ export class DragAndDropManager {
         // Кнопки действий: не блокируем тач чтобы сохранить click-события
         if (target.closest('.main-image-btn') || target.closest('.delete-btn')) return;
 
+        // На тач-устройствах перетаскивание стартует ТОЛЬКО с ручки (.drag-handle).
+        // Касание тела карточки не перехватываем — тогда страница скроллится штатно
+        // (иначе изображение «прилипает» к пальцу и прокрутить список невозможно).
+        if (!target.closest('.drag-handle')) return;
+
         const imageElement = target.closest(`.${this.type}-image`) as HTMLElement | null;
         if (!imageElement) return;
 
@@ -326,7 +331,9 @@ export class DragAndDropManager {
         if (img) {
             const imgClone = document.createElement('img');
             imgClone.src = img.src;
-            imgClone.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+            // Клон повторяет способ вписывания оригинала (cover/contain), чтобы превью не «прыгало»
+            const fit = getComputedStyle(img).objectFit || 'cover';
+            imgClone.style.cssText = `width:100%;height:100%;object-fit:${fit};display:block;`;
             clone.appendChild(imgClone);
         } else {
             clone.style.background = '#d1d5db';

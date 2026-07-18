@@ -12,7 +12,7 @@ import type {PreviewFit, ServerImage, UploadImage} from "@/types";
  */
 export default class ImageElementFactory {
     static createImageElement(image: ServerImage | UploadImage, imageSize: number, dispatcher: Dispatcher, existingElement: HTMLElement | null = null, previewFit: PreviewFit = 'cover'): HTMLElement {
-        const imgEl = ImageElementFactory.createContainer(image, existingElement);
+        const imgEl = ImageElementFactory.createContainer(image, existingElement, previewFit);
         ImageElementFactory.updateImage(imgEl, image, previewFit);
         ImageElementFactory.createMainImageButton(imgEl, image, dispatcher);
         ImageElementFactory.createDragHandle(imgEl);
@@ -21,9 +21,12 @@ export default class ImageElementFactory {
     }
 
     /** Создание или обновление контейнера изображения */
-    private static createContainer(image: ServerImage | UploadImage, existingElement: HTMLElement | null): HTMLElement {
+    private static createContainer(image: ServerImage | UploadImage, existingElement: HTMLElement | null, previewFit: PreviewFit = 'cover'): HTMLElement {
         const imgEl = existingElement || document.createElement('div');
-        imgEl.className = `gallery-image ${image.kind}-image`;
+        // fit-contain: в режиме contain плитке нужен видимый контур, иначе серые
+        // поля соседних превью сливаются и зазор грида визуально пропадает.
+        const fitClass = previewFit === 'contain' ? ' fit-contain' : '';
+        imgEl.className = `gallery-image ${image.kind}-image${fitClass}`;
         imgEl.draggable = true;
         imgEl.dataset.id = image.id.toString();
         // Ширина и высота задаются CSS grid в ImageListComponent (width: 100%; aspect-ratio: 1)

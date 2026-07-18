@@ -96,6 +96,17 @@ export default class ImageListComponent extends HTMLElement {
                 border-color: #93c5fd;
             }
 
+            /* Режим contain: превью вписано с полями. Даём плитке видимый контур и
+               подложку, иначе серые поля соседних превью сливаются через 4px-зазор
+               грида и промежутки визуально пропадают (в cover картинки встык — зазор
+               виден сам по себе). Контур — только серверным плиткам: у upload уже свой. */
+            .gallery-image.fit-contain {
+                background: #f3f4f6;
+            }
+            .server-image.fit-contain {
+                border-color: #e5e7eb;
+            }
+
             /* Перетаскиваемый элемент — невидимый слот, показывающий будущую позицию */
             .gallery-image.dragging {
                 opacity: 0;

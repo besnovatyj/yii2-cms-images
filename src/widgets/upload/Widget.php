@@ -46,9 +46,9 @@ use yii\helpers\Json;
 class Widget extends BaseWidget
 {
     /** Превью заполняет квадрат ячейки с обрезкой краёв. */
-    public const PREVIEW_FIT_COVER = 'cover';
+    public const string PREVIEW_FIT_COVER = 'cover';
     /** Превью вписывается в квадрат ячейки целиком (возможны поля по краям). */
-    public const PREVIEW_FIT_CONTAIN = 'contain';
+    public const string PREVIEW_FIT_CONTAIN = 'contain';
 
     public null|int|string $ownerId = null;
     public array $endpoints = [];
@@ -58,7 +58,7 @@ class Widget extends BaseWidget
      *
      * @var string
      */
-    public string $previewFit = self::PREVIEW_FIT_COVER;
+    public string $previewFit = self::PREVIEW_FIT_CONTAIN;
 
     /**
      * {@inheritdoc}

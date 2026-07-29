@@ -42,6 +42,10 @@ export default class ImageElementFactory {
         let imgTag = container.querySelector('img') as HTMLImageElement | null;
         if (!imgTag) {
             imgTag = document.createElement('img');
+            // Safari: у <img> есть собственное нативное перетаскивание (-webkit-user-drag),
+            // которое перехватывает жест раньше родительского draggable-контейнера — из-за
+            // этого dragstart на карточке не запускается и сортировка не работает. Гасим его.
+            imgTag.draggable = false;
             container.appendChild(imgTag);
         }
 

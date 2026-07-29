@@ -80,6 +80,18 @@ export default class ImageListComponent extends HTMLElement {
                 cursor: grab;
                 background: #e9ecef;
                 border: 1.5px solid transparent;
+                /* Safari: выделение текста/содержимого мешает старту нативного drag карточки */
+                -webkit-user-select: none;
+                user-select: none;
+            }
+
+            /* Safari: гасим нативное перетаскивание <img>, иначе WebKit тащит саму
+               картинку вместо родительской draggable-карточки и сортировка ломается
+               (Firefox/Chrome отдают приоритет родителю, Safari — картинке). */
+            .gallery-image img {
+                -webkit-user-drag: none;
+                user-select: none;
+                -webkit-user-select: none;
             }
             .gallery-image:hover {
                 transform: translateY(-3px) scale(1.02);

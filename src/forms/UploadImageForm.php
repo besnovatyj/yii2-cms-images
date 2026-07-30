@@ -55,9 +55,9 @@ class UploadImageForm extends Model
                 'extensions'   => 'png jpg jpeg webp heic heif',
                 'mimeTypes'    => 'image/*',
                 'minWidth'     => 100,
-                'maxWidth'     => 5000,
+                'maxWidth'     => 7000,
                 'minHeight'    => 100,
-                'maxHeight'    => 5000,
+                'maxHeight'    => 7000,
             ],
         ];
     }

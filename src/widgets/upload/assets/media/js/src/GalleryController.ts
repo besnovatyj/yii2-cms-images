@@ -146,13 +146,13 @@ export default class GalleryController {
                 showAlert({message: 'Все файлы успешно загружены', type: 'success'});
             } else if (result.succeeded > 0) {
                 showAlert({
-                    message: `Загружено ${result.succeeded} из ${result.succeeded + result.failed.length} файлов. Ошибки: ${result.failed.map(f => f.fileName).join(', ')}`,
+                    message: `Загружено ${result.succeeded} из ${result.succeeded + result.failed.length} файлов. Ошибки: ${result.failed.map(f => `${f.fileName}: ${f.error}`).join('; ')}`,
                     type: 'warning',
                     duration: 0
                 });
             } else {
                 showAlert({
-                    message: `Не удалось загрузить файлы: ${result.failed.map(f => f.fileName).join(', ')}`,
+                    message: `Не удалось загрузить файлы: ${result.failed.map(f => `${f.fileName}: ${f.error}`).join('; ')}`,
                     type: 'error',
                     duration: 0
                 });

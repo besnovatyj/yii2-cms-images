@@ -133,8 +133,10 @@ export default class GalleryFileUploader {
                             this.updateUploadStatus(uploadIndex, {progress: 100, status: 'completed'});
                             resolve();
                         } else {
-                            const errorMsg = response.message
-                                ?? response.data?.message
+                            // data.message несёт конкретный текст (например, причину провала валидации),
+                            // message — общий ярлык вроде «Validation error», поэтому он в приоритете ниже
+                            const errorMsg = response.data?.message
+                                ?? response.message
                                 ?? 'Ошибка сервера';
                             this.updateUploadStatus(uploadIndex, {progress: 0, status: 'failed', error: errorMsg});
                             reject(new Error(errorMsg));

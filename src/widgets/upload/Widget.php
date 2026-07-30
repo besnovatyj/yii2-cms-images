@@ -94,8 +94,8 @@ class Widget extends BaseWidget
             ],
             'imageScale' => 0.95, // размер каждого изображения в сетке виджета
             'previewFit' => $this->previewFit, // 'cover' (заполнить) | 'contain' (вписать)
-            'maxWidth'   => 5000, // максимальная ширина изображения в пикселях
-            'maxHeight'  => 5000, // максимальная высота изображения в пикселях
+            'maxWidth'   => 7000, // максимальная ширина изображения в пикселях
+            'maxHeight'  => 7000, // максимальная высота изображения в пикселях
         ];
 
         $jsonConfig  = Json::encode($config);

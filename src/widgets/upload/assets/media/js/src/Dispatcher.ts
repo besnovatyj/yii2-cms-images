@@ -4,17 +4,38 @@
 
 import type {UploadStatus} from './types';
 
-/** Карта событий галереи — type-safety для publish/subscribe */
-export interface GalleryEventMap {
+/**
+ * Карта событий галереи — type-safety для publish/subscribe.
+ *
+ * Именно `type`, а не `interface`: псевдоним типа получает неявную индексную сигнатуру и
+ * потому удовлетворяет ограничению `Record<string, any[]>` в объявлении Dispatcher
+ * (интерфейс — нет). Safety при этом полностью сохраняется.
+ */
+export type GalleryEventMap = {
+    // --- Загрузка файлов ---
     'VIEW.FILES_DROPPED': [FileList];
     'VIEW.FILES_SELECTED': [FileList];
-    'VIEW.IMAGE_DELETED': [{ type: 'server' | 'upload'; id: number }];
-    'VIEW.SORT_CHANGED': [{ id: number; sort: number }[]];
-    'VIEW.UPLOAD_SORT_CHANGED': [number[]];
     'VIEW.UPLOAD_CLICKED': [];
     'VIEW.CLEAR_CLICKED': [];
-    'VIEW.SET_MAIN_IMAGE': [{ id: number }];
     'FileUploader:UploadStatusUpdate': [UploadStatus[]];
+
+    // --- Действия над изображениями ---
+    'VIEW.IMAGE_DELETED': [{ type: 'server' | 'upload'; id: number }]; // одиночное (очередь/инспектор)
+    'VIEW.IMAGES_DELETED': [{ ids: number[] }];                        // массовое (bulk-панель)
+    'VIEW.SET_MAIN_IMAGE': [{ id: number }];
+    'VIEW.SORT_CHANGED': [{ id: number; sort: number }[]];             // новый порядок серверных изображений
+
+    // --- Переключение режимов и выделение ---
+    'VIEW.ENTER_SELECTION': [];
+    'VIEW.ENTER_REORDER': [];
+    'VIEW.EXIT_MODE': [];
+    'VIEW.SELECT_ALL': [];
+    'VIEW.TILE_ACTIVATED': [{ id: number }];      // клик по плитке в normal → открыть инспектор
+    'VIEW.TILE_TOGGLE_SELECT': [{ id: number }];  // клик по плитке в selection → инвертировать выбор
+    'VIEW.TILE_LONGPRESS': [{ id: number }];      // long-press (мобилка) → войти в selection и выбрать
+
+    // --- Инспектор ---
+    'VIEW.CLOSE_INSPECTOR': [];
 }
 
 export default class Dispatcher<EventMap extends Record<string, any[]> = GalleryEventMap> {

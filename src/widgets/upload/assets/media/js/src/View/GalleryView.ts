@@ -6,17 +6,37 @@ import Dispatcher from "@/Dispatcher";
 import GalleryState from "@/GalleryState";
 import DropZone from "@/View/DropZone";
 import {ControlsComponent} from "@/View/ControlsComponent";
-import ImageListComponent from "@/View/ImageListComponent";
+import GridToolbar from "@/View/GridToolbar";
+import ImageGrid from "@/View/ImageGrid";
+import UploadQueue from "@/View/UploadQueue";
+import BulkActionBar from "@/View/BulkActionBar";
+import InspectorPanel from "@/View/InspectorPanel";
 import PreloaderComponent from "@/View/PreloaderComponent";
 import TopProgressBar from "@/View/TopProgressBar";
 import type {PreviewFit} from "@/types";
 
+/**
+ * Корневой оркестратор представления.
+ *
+ * Владеет всеми слоями UI и раскладкой, но не содержит бизнес-логики: получает состояние
+ * через {@link render} и распределяет его по компонентам, а также транслирует глобальный
+ * Esc в интенты закрытия. Действия компонентов идут в контроллер через Dispatcher.
+ *
+ * Слои (сверху вниз): тулбар режимов → панель массовых действий → сетка изображений →
+ * секция загрузки (дропзона + очередь + кнопки). Поверх: инспектор (fixed), прелоадер,
+ * верхний прогресс-бар.
+ */
 export default class GalleryView {
-    private container: HTMLElement;
-    private preloader: PreloaderComponent | null = null;
-    private serverImageList: ImageListComponent | undefined;
-    private uploadImageList: ImageListComponent | undefined;
-    private topBar!: TopProgressBar;
+    private readonly container: HTMLElement;
+
+    private readonly toolbar: GridToolbar;
+    private readonly grid: ImageGrid;
+    private readonly queue: UploadQueue;
+    private readonly bulkBar: BulkActionBar;
+    private readonly inspector: InspectorPanel;
+    private readonly preloader: PreloaderComponent;
+    private readonly topBar: TopProgressBar;
+
     private topBarActive = false;
     private wasUploading = false;
 
@@ -29,67 +49,55 @@ export default class GalleryView {
         this.container = document.getElementById(containerId)!;
         this.container.innerHTML = '';
         this.applyContainerStyles();
-        this.setupComponents(imageScale, previewFit);
-    }
 
-    /** Инжектируем базовые стили во внешний контейнер виджета */
-    private applyContainerStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            .gallery-upload {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                position: relative;
-            }
-        `;
-        document.head.appendChild(style);
+        const imageSize = 100 * imageScale;
 
-        this.container.style.display = 'flex';
-        this.container.style.flexDirection = 'column';
-        this.container.style.gap = '0';
-    }
-
-    private setupComponents(imageScale: number, previewFit: PreviewFit) {
         this.topBar = new TopProgressBar();
-        const controls = new ControlsComponent(this.dispatcher);
-        const dropZone = new DropZone(this.dispatcher);
-        this.serverImageList = new ImageListComponent(this.dispatcher, 'server', imageScale, 'В галерее', previewFit);
-        this.uploadImageList = new ImageListComponent(this.dispatcher, 'upload', imageScale, 'Выбрано для загрузки', previewFit);
+        this.toolbar = new GridToolbar(this.dispatcher);
+        this.bulkBar = new BulkActionBar(this.dispatcher);
+        this.grid = new ImageGrid(this.dispatcher, imageSize, previewFit);
+        this.queue = new UploadQueue(this.dispatcher, imageSize, previewFit);
+        this.inspector = new InspectorPanel(this.dispatcher, previewFit);
         this.preloader = new PreloaderComponent();
 
-        // Секция загрузки: дропзона + очередь + кнопки — всё рядом
+        const controls = new ControlsComponent(this.dispatcher);
+        const dropZone = new DropZone(this.dispatcher);
+
+        // Секция загрузки: дропзона + очередь + кнопки
         const uploadSection = document.createElement('div');
-        uploadSection.style.cssText = `
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 12px;
-            margin-top: 12px;
-            background: #fafafa;
-        `;
-        uploadSection.append(
-            dropZone,
-            this.uploadImageList,
-            controls,
-        );
+        uploadSection.className = 'gu-upload-section';
+        uploadSection.append(dropZone, this.queue, controls);
 
         this.container.append(
-            this.serverImageList,
+            this.toolbar,
+            this.bulkBar,
+            this.grid,
             uploadSection,
             this.preloader,
+            this.inspector,
         );
+
+        this.bindGlobalKeys();
     }
 
-    render(model: GalleryState) {
-        this.serverImageList?.render(model.serverImages);
-        this.uploadImageList?.render(model.uploadImages);
+    render(model: GalleryState): void {
+        this.toolbar.update(model.uiMode, model.serverImages.length);
+        this.grid.render(model.serverImages, model.uiMode, model.selectedIds);
+        this.queue.render(model.uploadImages);
+
+        const inSelection = model.uiMode === 'selection';
+        this.bulkBar.setVisible(inSelection);
+        if (inSelection) this.bulkBar.update(model.selectedIds, model.serverImages);
+
+        this.inspector.update(model.inspectorImage);
 
         if (model.isUploading) {
             this.wasUploading = true;
-            // Обновляем прогресс без перестройки DOM если оверлей уже показан
-            this.preloader!.show('upload', model.overallProgress);
+            this.preloader.show('upload', model.overallProgress);
+            this.preloader.setSubtitle(`${model.uploadDoneCount} из ${model.uploadTotalCount}`);
             this.topBar.setProgress(model.overallProgress);
         } else {
-            this.preloader!.hide();
-            // Завершаем top bar только если он был активен (upload, delete или init)
+            this.preloader.hide();
             if (this.wasUploading || this.topBarActive) {
                 this.topBar.complete();
                 this.wasUploading = false;
@@ -99,21 +107,42 @@ export default class GalleryView {
     }
 
     /**
-     * Управление оверлеем для операций init и delete.
+     * Оверлей для операций init и delete.
      * Для upload оверлей управляется через render() + model.isUploading.
      * Для sort и setMainImage оверлей не нужен — используйте topBarAction().
+     *
+     * @param progress 'indeterminate' — shimmer (неизвестная длительность);
+     *                 'determinate'   — реальный прогресс с 0% (обновляется через {@link busyProgress}).
      */
-    public preloaderAction(action: 'start' | 'stop', mode: 'loading' | 'delete' | 'upload' = 'loading'): void {
+    public preloaderAction(
+        action: 'start' | 'stop',
+        mode: 'loading' | 'delete' | 'upload' = 'loading',
+        progress: 'indeterminate' | 'determinate' = 'indeterminate'
+    ): void {
         if (action === 'start') {
-            this.preloader!.show(mode);
-            this.topBar.setIndeterminate();
+            this.preloader.show(mode);
+            if (progress === 'determinate') {
+                this.topBar.setProgress(0);
+            } else {
+                this.topBar.setIndeterminate();
+            }
             this.topBarActive = true;
         } else {
-            this.preloader!.hide();
+            this.preloader.hide();
         }
     }
 
-    /** Управление top bar для быстрых операций без оверлея (sort, setMainImage) */
+    /**
+     * Обновить детерминированный прогресс верхнего бара и (опц.) подпись оверлея.
+     * Для пошаговых операций, где известно общее число шагов (пакетное удаление).
+     */
+    public busyProgress(value: number, subtitle?: string): void {
+        this.topBar.setProgress(value);
+        this.topBarActive = true;
+        if (subtitle !== undefined) this.preloader.setSubtitle(subtitle);
+    }
+
+    /** Top bar для быстрых операций без оверлея (sort, setMainImage). */
     public topBarAction(action: 'indeterminate' | 'complete'): void {
         if (action === 'indeterminate') {
             this.topBar.setIndeterminate();
@@ -122,5 +151,49 @@ export default class GalleryView {
             this.topBar.complete();
             this.topBarActive = false;
         }
+    }
+
+    /** Esc закрывает инспектор, а затем выходит из активного режима. */
+    private bindGlobalKeys(): void {
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            if (this.inspector.style.display !== 'none') {
+                this.dispatcher.publish('VIEW.CLOSE_INSPECTOR');
+            } else {
+                this.dispatcher.publish('VIEW.EXIT_MODE');
+            }
+        });
+    }
+
+    /** Базовые стили контейнера + палитра как CSS-переменные (наследуются в Shadow DOM). */
+    private applyContainerStyles(): void {
+        const style = document.createElement('style');
+        style.textContent = `
+            .gallery-upload {
+                --gu-accent: #4f7df3;
+                --gu-accent-hover: #3b6de0;
+                --gu-accent-soft: #93c5fd;
+                --gu-danger: #ef4444;
+                --gu-cover: rgba(245,158,11,.95);
+                --gu-surface: #f3f4f6;
+                --gu-border: #e5e7eb;
+                --gu-tile-bg: #e9ecef;
+                --gu-text: #374151;
+                --gu-text-strong: #1f2937;
+                --gu-text-muted: #9ca3af;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                position: relative;
+                display: flex;
+                flex-direction: column;
+            }
+            .gallery-upload .gu-upload-section {
+                border: 1px solid var(--gu-border);
+                border-radius: 12px;
+                padding: 12px;
+                margin-top: 12px;
+                background: #fafafa;
+            }
+        `;
+        document.head.appendChild(style);
     }
 }

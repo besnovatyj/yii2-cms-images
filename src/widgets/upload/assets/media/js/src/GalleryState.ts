@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Besnovatyj. Licensed under the MIT License.
  */
 
-import type {ServerImage, UploadImage, UploadStatus, ValidationResult} from "@/types";
+import type {ServerImage, UiMode, UploadImage, UploadStatus, ValidationResult} from "@/types";
 
 // GalleryState (Model)
 export default class GalleryState {
@@ -25,12 +25,112 @@ export default class GalleryState {
 
     set serverImages(images: ServerImage[]) {
         this._serverImages = images;
+        // Удалённые/изменённые изображения не должны оставаться выбранными или открытыми в инспекторе
+        this.pruneUiRefs();
+    }
+
+    // ==================== UI-состояние (режимы взаимодействия) ====================
+
+    /** Текущий режим сетки: 'normal' | 'selection' | 'reorder'. */
+    private _uiMode: UiMode = 'normal';
+    /** ID серверных изображений, выбранных в режиме selection. */
+    private _selectedIds = new Set<number>();
+    /** ID изображения, открытого в панели свойств (инспекторе), либо null. */
+    private _inspectorImageId: number | null = null;
+
+    get uiMode(): UiMode {
+        return this._uiMode;
+    }
+
+    get selectedIds(): ReadonlySet<number> {
+        return this._selectedIds;
+    }
+
+    get inspectorImageId(): number | null {
+        return this._inspectorImageId;
+    }
+
+    /** Изображение, открытое в инспекторе (или null, если id больше не существует). */
+    get inspectorImage(): ServerImage | null {
+        if (this._inspectorImageId === null) return null;
+        return this._serverImages.find(img => img.id === this._inspectorImageId) ?? null;
+    }
+
+    /** Вход в режим выделения (инспектор при этом закрывается). */
+    enterSelection(): void {
+        this._uiMode = 'selection';
+        this._inspectorImageId = null;
+    }
+
+    /** Вход в режим смены порядка (выбор и инспектор сбрасываются). */
+    enterReorder(): void {
+        this._uiMode = 'reorder';
+        this._selectedIds.clear();
+        this._inspectorImageId = null;
+    }
+
+    /** Возврат в обычный режим со сбросом выбора. */
+    exitMode(): void {
+        this._uiMode = 'normal';
+        this._selectedIds.clear();
+    }
+
+    isSelected(id: number): boolean {
+        return this._selectedIds.has(id);
+    }
+
+    /** Инвертировать выбор изображения. Возвращает новое состояние выбранности. */
+    toggleSelected(id: number): boolean {
+        if (this._selectedIds.has(id)) {
+            this._selectedIds.delete(id);
+            return false;
+        }
+        this._selectedIds.add(id);
+        return true;
+    }
+
+    /** Выбрать все серверные изображения. */
+    selectAll(): void {
+        this._selectedIds = new Set(this._serverImages.map(img => img.id));
+    }
+
+    clearSelection(): void {
+        this._selectedIds.clear();
+    }
+
+    /** Открыть/закрыть инспектор для изображения (null — закрыть). */
+    setInspector(id: number | null): void {
+        this._inspectorImageId = id;
+    }
+
+    /**
+     * Отбросить ссылки UI на изображения, которых больше нет в списке
+     * (после удаления/перезагрузки). Держит selection и inspector согласованными.
+     */
+    private pruneUiRefs(): void {
+        const existing = new Set(this._serverImages.map(img => img.id));
+        for (const id of this._selectedIds) {
+            if (!existing.has(id)) this._selectedIds.delete(id);
+        }
+        if (this._inspectorImageId !== null && !existing.has(this._inspectorImageId)) {
+            this._inspectorImageId = null;
+        }
     }
 
     private _uploadImages: UploadImage[] = [];
 
     get uploadImages(): UploadImage[] {
         return this._uploadImages;
+    }
+
+    /** Всего файлов в очереди загрузки. */
+    get uploadTotalCount(): number {
+        return this._uploadImages.length;
+    }
+
+    /** Сколько файлов очереди уже обработано (успех или ошибка). */
+    get uploadDoneCount(): number {
+        return this._uploadImages.filter(img => img.status === 'completed' || img.status === 'failed').length;
     }
 
     // Функция для получения разрешения изображения

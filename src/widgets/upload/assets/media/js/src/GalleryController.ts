@@ -36,21 +36,45 @@ export default class GalleryController {
     }
 
     private setupEventListeners() {
+        // Загрузка
         this.dispatcher.subscribe('VIEW.FILES_DROPPED', (files: FileList) => this.handleFilesAdded(files));
         this.dispatcher.subscribe('VIEW.FILES_SELECTED', (files: FileList) => this.handleFilesAdded(files));
-        this.dispatcher.subscribe('VIEW.IMAGE_DELETED', (data: {
-            type: 'server' | 'upload';
-            id: number
-        }) => this.handleImageDeleted(data));
-        this.dispatcher.subscribe('VIEW.SORT_CHANGED', (newOrder: {
-            id: number;
-            sort: number
-        }[]) => this.handleServerSortChanged(newOrder));
-        this.dispatcher.subscribe('VIEW.UPLOAD_SORT_CHANGED', (newOrderIds: number[]) => this.handleUploadSortChanged(newOrderIds));
         this.dispatcher.subscribe('VIEW.UPLOAD_CLICKED', () => this.handleUploadClicked());
         this.dispatcher.subscribe('VIEW.CLEAR_CLICKED', () => this.handleClearClicked());
-        this.dispatcher.subscribe('VIEW.SET_MAIN_IMAGE', (data: { id: number }) => this.handleSetMainImage(data));
         this.dispatcher.subscribe('FileUploader:UploadStatusUpdate', (status: UploadStatus[]) => this.handleUploadStatusUpdate(status));
+
+        // Действия над изображениями
+        this.dispatcher.subscribe('VIEW.IMAGE_DELETED', (data) => this.handleImageDeleted(data));
+        this.dispatcher.subscribe('VIEW.IMAGES_DELETED', (data) => this.handleImagesDeleted(data.ids));
+        this.dispatcher.subscribe('VIEW.SET_MAIN_IMAGE', (data) => this.handleSetMainImage(data));
+        this.dispatcher.subscribe('VIEW.SORT_CHANGED', (newOrder) => this.handleServerSortChanged(newOrder));
+
+        // Режимы и выделение
+        this.dispatcher.subscribe('VIEW.ENTER_SELECTION', () => this.transition(() => this.model.enterSelection()));
+        this.dispatcher.subscribe('VIEW.ENTER_REORDER', () => this.transition(() => this.model.enterReorder()));
+        this.dispatcher.subscribe('VIEW.EXIT_MODE', () => this.transition(() => this.model.exitMode()));
+        this.dispatcher.subscribe('VIEW.SELECT_ALL', () => this.handleSelectAll());
+        this.dispatcher.subscribe('VIEW.TILE_TOGGLE_SELECT', (data) => this.transition(() => this.model.toggleSelected(data.id)));
+        this.dispatcher.subscribe('VIEW.TILE_LONGPRESS', (data) => this.transition(() => {
+            this.model.enterSelection();
+            this.model.toggleSelected(data.id);
+        }));
+
+        // Инспектор
+        this.dispatcher.subscribe('VIEW.TILE_ACTIVATED', (data) => this.transition(() => this.model.setInspector(data.id)));
+        this.dispatcher.subscribe('VIEW.CLOSE_INSPECTOR', () => this.transition(() => this.model.setInspector(null)));
+    }
+
+    /** Синхронное изменение UI-состояния + перерисовка. */
+    private transition(mutate: () => void): void {
+        mutate();
+        this.view.render(this.model);
+    }
+
+    private handleSelectAll(): void {
+        const allSelected = this.model.selectedIds.size === this.model.serverImages.length
+            && this.model.serverImages.length > 0;
+        this.transition(() => allSelected ? this.model.clearSelection() : this.model.selectAll());
     }
 
     /**
@@ -72,31 +96,63 @@ export default class GalleryController {
         this.view.render(this.model);
     }
 
-    private async handleImageDeleted(data: { type: 'server' | 'upload'; id: number }) {
-        if (data.type === 'server') {
-            this.view.preloaderAction('start', 'delete');
-            try {
-                await this.service.deleteImage(data.id);
-                const deletedImage = this.model.serverImages.find(img => img.id === data.id);
-                const wasMain = deletedImage?.isMain ?? false;
-                this.model.serverImages = this.model.serverImages.filter(img => img.id !== data.id);
-                // Если удалённое изображение было главным — бэкенд назначает главным первое по sort.
-                // Изображения в стейте уже отсортированы по sort, поэтому помечаем первое оставшееся.
-                if (wasMain && this.model.serverImages.length > 0) {
-                    this.model.serverImages = this.model.serverImages.map((img, index) => ({
-                        ...img,
-                        isMain: index === 0
-                    }));
-                }
-                this.view.render(this.model);
-            } catch (error: unknown) {
-                const message = error instanceof Error ? error.message : String(error);
-                showAlert({message: `Не удалось удалить изображение: ${message}`, type: 'error', duration: 0});
-            }
-            this.view.preloaderAction('stop');
-        } else {
+    /** Одиночное удаление из очереди загрузки (server-удаление идёт через handleImagesDeleted). */
+    private handleImageDeleted(data: { type: 'server' | 'upload'; id: number }) {
+        if (data.type === 'upload') {
             this.model.removeUploadImage(data.id);
             this.view.render(this.model);
+        } else {
+            this.handleImagesDeleted([data.id]);
+        }
+    }
+
+    /**
+     * Массовое (и одиночное) удаление серверных изображений.
+     * Удаляет по одному существующим эндпойнтом, собирая частичные ошибки; затем локально
+     * убирает удалённые и переназначает главное (бэкенд назначает главным первое по sort).
+     */
+    private async handleImagesDeleted(ids: number[]) {
+        if (ids.length === 0) return;
+
+        const targetSet = new Set(ids);
+        const wasMainDeleted = this.model.serverImages.some(img => img.isMain && targetSet.has(img.id));
+
+        // Удаляем по одному запросу на фото → показываем реальный прогресс в верхнем баре
+        const total = ids.length;
+        this.view.preloaderAction('start', 'delete', 'determinate');
+        this.view.busyProgress(0, `0 из ${total}`);
+        const deleted: number[] = [];
+        const failed: number[] = [];
+        let processed = 0;
+        for (const id of ids) {
+            try {
+                await this.service.deleteImage(id);
+                deleted.push(id);
+            } catch (error: unknown) {
+                console.error(`Не удалось удалить изображение ${id}:`, error);
+                failed.push(id);
+            }
+            processed++;
+            this.view.busyProgress((processed / total) * 100, `${processed} из ${total}`);
+        }
+
+        const deletedSet = new Set(deleted);
+        let images = this.model.serverImages.filter(img => !deletedSet.has(img.id));
+        // Если удалили главное — назначаем главным первое оставшееся (список отсортирован по sort)
+        if (wasMainDeleted && images.length > 0 && !images.some(img => img.isMain)) {
+            images = images.map((img, index) => ({...img, isMain: index === 0}));
+        }
+        this.model.serverImages = images;
+        this.model.exitMode(); // выходим из режима выделения после массовой операции
+        this.view.render(this.model);
+        this.view.preloaderAction('stop');
+
+        if (failed.length > 0) {
+            showAlert({
+                message: `Не удалось удалить ${failed.length} из ${ids.length} изображений`,
+                type: 'error',
+                duration: 0
+            });
         }
     }
 
@@ -105,22 +161,17 @@ export default class GalleryController {
         try {
             await this.service.setNewSort(newOrder);
             const sortMap = new Map(newOrder.map(item => [item.id, item.sort]));
-            this.model.serverImages = this.model.serverImages.map(img => ({
-                ...img,
-                sort: sortMap.get(img.id) || img.sort
-            }));
-            this.model.serverImages.sort((a, b) => a.sort - b.sort);
+            this.model.serverImages = this.model.serverImages
+                .map(img => ({...img, sort: sortMap.get(img.id) ?? img.sort}))
+                .sort((a, b) => a.sort - b.sort);
             this.view.render(this.model);
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : String(error);
             showAlert({message: `Не удалось установить новый порядок: ${message}`, type: 'error', duration: 0});
+            // Откатываем визуальный порядок к состоянию модели
+            this.view.render(this.model);
             this.view.topBarAction('complete');
         }
-    }
-
-    private handleUploadSortChanged(newOrderIds: number[]) {
-        this.model.reorderUploadImages(newOrderIds);
-        this.view.render(this.model);
     }
 
     /**

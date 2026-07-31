@@ -10,6 +10,14 @@
  */
 export type PreviewFit = 'cover' | 'contain';
 
+/**
+ * Режим взаимодействия с сеткой изображений.
+ * 'normal'    — чистые плитки, клик открывает панель свойств (инспектор);
+ * 'selection' — режим выделения: центральные галочки + панель массовых действий;
+ * 'reorder'   — режим смены порядка: перетаскивание плиток (SortableJS).
+ */
+export type UiMode = 'normal' | 'selection' | 'reorder';
+
 /** Конфигурация для глобальной функции showAlert */
 export interface ShowAlertConfig {
     message: string; // Текст сообщения (обязательное поле)

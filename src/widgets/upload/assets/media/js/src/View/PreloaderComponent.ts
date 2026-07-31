@@ -132,6 +132,13 @@ export default class PreloaderComponent extends HTMLElement {
         }
     }
 
+    /** Задаёт произвольную подпись оверлея (например, «3 из 10» при пакетном удалении). */
+    public setSubtitle(text: string): void {
+        if (this.subtitleEl) {
+            this.subtitleEl.textContent = text;
+        }
+    }
+
     public hide(): void {
         this.container!.classList.remove('visible');
     }

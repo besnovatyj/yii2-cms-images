@@ -18,16 +18,27 @@ export type PreviewFit = 'cover' | 'contain';
  */
 export type UiMode = 'normal' | 'selection' | 'reorder';
 
-/** Конфигурация для глобальной функции showAlert */
-export interface ShowAlertConfig {
-    message: string; // Текст сообщения (обязательное поле)
-    type: 'success' | 'error' | 'warning' | 'info'; // Тип сообщения (обязательное поле)
-    duration?: number; // Длительность отображения в миллисекундах (необязательное поле)
-}
+/** Тип уведомления модального окна виджета. */
+export type NotifyType = 'success' | 'error' | 'warning' | 'info';
 
-// Объявление типа для глобальной функции showAlert
-declare global {
-    function showAlert(config: ShowAlertConfig): void;
+/**
+ * Параметры уведомления, показываемого в собственном модальном окне виджета
+ * ({@link NotificationModal}).
+ *
+ * `details` — список подробностей (например, пофайловые ошибки загрузки). Именно сюда
+ * складываются все технические сообщения об ошибках, чтобы они целиком доходили до
+ * пользователя и не обрезались, в отличие от компактных подписей под плитками.
+ *
+ * `duration` — время автозакрытия в мс. Если не задано: `success` закрывается через
+ * пару секунд, а `error`/`warning`/`info` не закрываются автоматически (только по крестику).
+ * Значение `0` явно означает «показывать бесконечно».
+ */
+export interface NotifyOptions {
+    type: NotifyType;
+    message: string;
+    title?: string;
+    details?: string[];
+    duration?: number;
 }
 
 /** Серверное изображение */

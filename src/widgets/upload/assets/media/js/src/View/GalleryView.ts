@@ -13,7 +13,8 @@ import BulkActionBar from "@/View/BulkActionBar";
 import InspectorPanel from "@/View/InspectorPanel";
 import PreloaderComponent from "@/View/PreloaderComponent";
 import TopProgressBar from "@/View/TopProgressBar";
-import type {PreviewFit} from "@/types";
+import NotificationModal from "@/View/NotificationModal";
+import type {NotifyOptions, PreviewFit} from "@/types";
 
 /**
  * Корневой оркестратор представления.
@@ -36,6 +37,7 @@ export default class GalleryView {
     private readonly inspector: InspectorPanel;
     private readonly preloader: PreloaderComponent;
     private readonly topBar: TopProgressBar;
+    private readonly notifier: NotificationModal;
 
     private topBarActive = false;
     private wasUploading = false;
@@ -59,6 +61,10 @@ export default class GalleryView {
         this.queue = new UploadQueue(this.dispatcher, imageSize, previewFit);
         this.inspector = new InspectorPanel(this.dispatcher, previewFit);
         this.preloader = new PreloaderComponent();
+        // Модальное окно уведомлений живёт на уровне body (fixed-оверлей поверх всего),
+        // а не внутри контейнера виджета — чтобы перекрывать всю страницу по центру.
+        this.notifier = new NotificationModal();
+        document.body.appendChild(this.notifier);
 
         const controls = new ControlsComponent(this.dispatcher);
         const dropZone = new DropZone(this.dispatcher);
@@ -104,6 +110,15 @@ export default class GalleryView {
                 this.topBarActive = false;
             }
         }
+    }
+
+    /**
+     * Показать уведомление пользователю в собственном модальном окне виджета.
+     * Единая точка вывода успехов/ошибок/предупреждений — сюда должны доходить все
+     * сообщения об ошибках целиком (с пофайловыми подробностями в `details`).
+     */
+    public notify(options: NotifyOptions): void {
+        this.notifier.notify(options);
     }
 
     /**

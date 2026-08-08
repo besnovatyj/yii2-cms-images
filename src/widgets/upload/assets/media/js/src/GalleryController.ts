@@ -29,7 +29,7 @@ export default class GalleryController {
         } catch (error: unknown) {
             console.error(error);
             const message = error instanceof Error ? error.message : String(error);
-            showAlert({message: `Не удалось загрузить изображения: ${message}`, type: 'error', duration: 0});
+            this.view.notify({type: 'error', title: 'Не удалось загрузить изображения', message});
         } finally {
             this.view.preloaderAction('stop');
         }
@@ -84,13 +84,13 @@ export default class GalleryController {
     private async handleFilesAdded(files: FileList) {
         const result = await this.model.addUploadImages(files);
         if (result.errors.length === 1) {
-            showAlert({message: result.errors[0].message, type: 'error', duration: 0});
+            this.view.notify({type: 'error', title: 'Файл не добавлен', message: result.errors[0].message});
         } else if (result.errors.length > 1) {
-            const fileNames = result.errors.map(e => e.fileName).join(', ');
-            showAlert({
-                message: `Не удалось добавить ${result.errors.length} файлов: ${fileNames}`,
+            this.view.notify({
                 type: 'error',
-                duration: 0
+                title: 'Часть файлов не добавлена',
+                message: `Не удалось добавить файлов: ${result.errors.length}`,
+                details: result.errors.map(e => `${e.fileName}: ${e.message}`),
             });
         }
         this.view.render(this.model);
@@ -122,15 +122,16 @@ export default class GalleryController {
         this.view.preloaderAction('start', 'delete', 'determinate');
         this.view.busyProgress(0, `0 из ${total}`);
         const deleted: number[] = [];
-        const failed: number[] = [];
+        const failed: Array<{ id: number; error: string }> = [];
         let processed = 0;
         for (const id of ids) {
             try {
                 await this.service.deleteImage(id);
                 deleted.push(id);
             } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : String(error);
                 console.error(`Не удалось удалить изображение ${id}:`, error);
-                failed.push(id);
+                failed.push({id, error: message});
             }
             processed++;
             this.view.busyProgress((processed / total) * 100, `${processed} из ${total}`);
@@ -148,10 +149,11 @@ export default class GalleryController {
         this.view.preloaderAction('stop');
 
         if (failed.length > 0) {
-            showAlert({
-                message: `Не удалось удалить ${failed.length} из ${ids.length} изображений`,
+            this.view.notify({
                 type: 'error',
-                duration: 0
+                title: 'Не удалось удалить',
+                message: `Не удалось удалить ${failed.length} из ${ids.length} изображений`,
+                details: failed.map(f => `Изображение #${f.id}: ${f.error}`),
             });
         }
     }
@@ -167,7 +169,7 @@ export default class GalleryController {
             this.view.render(this.model);
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : String(error);
-            showAlert({message: `Не удалось установить новый порядок: ${message}`, type: 'error', duration: 0});
+            this.view.notify({type: 'error', title: 'Не удалось изменить порядок', message});
             // Откатываем визуальный порядок к состоянию модели
             this.view.render(this.model);
             this.view.topBarAction('complete');
@@ -180,7 +182,7 @@ export default class GalleryController {
      */
     private async handleUploadClicked() {
         if (this.model.uploadImages.length === 0) {
-            showAlert({message: 'Нет файлов для загрузки', type: 'warning'});
+            this.view.notify({type: 'warning', message: 'Нет файлов для загрузки'});
             return;
         }
         this.model.isUploading = true;
@@ -194,25 +196,27 @@ export default class GalleryController {
             this.view.render(this.model);
 
             if (result.failed.length === 0) {
-                showAlert({message: 'Все файлы успешно загружены', type: 'success'});
+                this.view.notify({type: 'success', message: 'Все файлы успешно загружены'});
             } else if (result.succeeded > 0) {
-                showAlert({
-                    message: `Загружено ${result.succeeded} из ${result.succeeded + result.failed.length} файлов. Ошибки: ${result.failed.map(f => `${f.fileName}: ${f.error}`).join('; ')}`,
+                this.view.notify({
                     type: 'warning',
-                    duration: 0
+                    title: 'Загружены не все файлы',
+                    message: `Загружено ${result.succeeded} из ${result.succeeded + result.failed.length} файлов. Остальные не загрузились:`,
+                    details: result.failed.map(f => `${f.fileName}: ${f.error}`),
                 });
             } else {
-                showAlert({
-                    message: `Не удалось загрузить файлы: ${result.failed.map(f => `${f.fileName}: ${f.error}`).join('; ')}`,
+                this.view.notify({
                     type: 'error',
-                    duration: 0
+                    title: 'Не удалось загрузить файлы',
+                    message: `Ни один из файлов (${result.failed.length}) не загрузился:`,
+                    details: result.failed.map(f => `${f.fileName}: ${f.error}`),
                 });
             }
         } catch (error: unknown) {
             this.model.isUploading = false;
             this.view.render(this.model); // Снимаем оверлей при ошибке
             const message = error instanceof Error ? error.message : String(error);
-            showAlert({message: `Ошибка загрузки: ${message}`, type: 'error', duration: 0});
+            this.view.notify({type: 'error', title: 'Ошибка загрузки', message});
         }
     }
 
@@ -232,7 +236,7 @@ export default class GalleryController {
             this.view.render(this.model);
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : String(error);
-            showAlert({message: `Не удалось установить главное изображение: ${message}`, type: 'error', duration: 0});
+            this.view.notify({type: 'error', title: 'Не удалось назначить главное изображение', message});
             this.view.topBarAction('complete');
         }
     }

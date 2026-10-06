@@ -85,8 +85,11 @@ class GetImagesAction extends Action
                     'id'         => $image->id,
                     'sort'       => $image->sort,
                     'fileName'   => $image->file,
-                    'previewUrl' => $image->getThumbUrl('file', $this->previewThumbProfile),
-                    'srcUrl'     => $image->getUploadUrl('file'),
+                    // Пока превью не создано, previewUrl указывает на оригинал, а виджет
+                    // по previewReady показывает статус и перезапрашивает список.
+                    'previewUrl'   => $image->getThumbUrl('file', $this->previewThumbProfile),
+                    'previewReady' => $image->hasThumb('file', $this->previewThumbProfile),
+                    'srcUrl'       => $image->getUploadUrl('file'),
                     'isMain'     => $image->id === $owner->getMainImageId(),
                 ];
             }

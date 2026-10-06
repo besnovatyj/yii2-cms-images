@@ -47,7 +47,8 @@ export interface ServerImage {
     id: number;
     sort: number;
     fileName: string;
-    previewUrl: string;
+    previewUrl: string; // Пока превью не создано — URL оригинала
+    previewReady: boolean; // Превью уже создано (генерация идёт в фоне через очередь)
     srcUrl: string;
     isMain: boolean; // Является ли главным изображением галереи
 }

@@ -236,6 +236,22 @@ export default class ImageGrid extends HTMLElement {
                 }
                 .tile.is-main .tile__badge { display: inline-flex; }
 
+                /* === Отметка «Превью готовится» — превью генерируется в фоне, показан оригинал === */
+                .tile__pending {
+                    position: absolute;
+                    left: 6px; right: 6px; bottom: 6px;
+                    display: none;
+                    justify-content: center;
+                    padding: 3px 6px;
+                    font-size: 10px;
+                    font-weight: 600;
+                    color: #fff;
+                    background: rgba(17,24,39,.65);
+                    border-radius: 5px;
+                    pointer-events: none;
+                }
+                .tile.is-preview-pending .tile__pending { display: flex; }
+
                 /* === Центральная галочка выбора (видна только в selection) === */
                 .tile__check {
                     position: absolute;

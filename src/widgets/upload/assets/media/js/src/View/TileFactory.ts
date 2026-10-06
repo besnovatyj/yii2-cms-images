@@ -12,6 +12,7 @@ import type {PreviewFit, ServerImage} from "@/types";
  * (действия живут в тулбаре, панели массовых действий и инспекторе). На плитке есть:
  *   - `<img>` превью;
  *   - бейдж «Обложка» на главном изображении (статус, а не таргет для клика);
+ *   - отметка «Превью готовится», пока превью генерируется в фоне (в `<img>` при этом оригинал);
  *   - большая центральная полупрозрачная галочка выбора (видна только в режиме selection,
  *     переключается CSS-классом режима на контейнере сетки в ImageGrid).
  *
@@ -37,6 +38,7 @@ export default class TileFactory {
         tile.dataset.id = image.id.toString();
         tile.classList.toggle('is-selected', selected);
         tile.classList.toggle('is-main', image.isMain);
+        tile.classList.toggle('is-preview-pending', !image.previewReady);
         tile.classList.toggle('fit-contain', previewFit === 'contain');
 
         TileFactory.updateImage(tile, image, previewFit);
@@ -56,11 +58,15 @@ export default class TileFactory {
         badge.className = 'tile__badge';
         badge.textContent = 'Обложка';
 
+        const pending = document.createElement('span');
+        pending.className = 'tile__pending';
+        pending.textContent = 'Превью готовится';
+
         const check = document.createElement('span');
         check.className = 'tile__check';
         check.innerHTML = icons.check(20);
 
-        tile.append(img, badge, check);
+        tile.append(img, badge, pending, check);
         return tile;
     }
 

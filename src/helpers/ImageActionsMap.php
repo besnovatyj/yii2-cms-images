@@ -11,6 +11,7 @@ namespace Besnovatyj\Images\helpers;
 
 use Besnovatyj\Images\actions\DeleteImageAction;
 use Besnovatyj\Images\actions\GetImagesAction;
+use Besnovatyj\Images\actions\RegenerateThumbsAction;
 use Besnovatyj\Images\actions\SetMainImageAction;
 use Besnovatyj\Images\actions\SetNewSortAction;
 use Besnovatyj\Images\actions\UploadImageAction;
@@ -40,13 +41,17 @@ use Besnovatyj\Images\contracts\ImageOwnerInterface;
  *     'get-images'     => ['POST'],
  *     'set-main-image' => ['POST'],
  *     'set-new-sort'   => ['POST'],
+ *     'regenerate-thumbs' => ['POST'],
  * ],
  * ```
+ *
+ * `regenerate-thumbs` — прогрев превью всех изображений модуля через очередь; кнопка для страницы
+ * списка — {@see \Besnovatyj\Images\widgets\regenerate\RegenerateThumbsButton}.
  */
 final class ImageActionsMap
 {
     /**
-     * Возвращает конфигурацию всех пяти image-actions для Controller::actions().
+     * Возвращает конфигурацию всех image-actions для Controller::actions().
      *
      * @param class-string<BaseImage>      $imageClass     FQCN потомка BaseImage
      * @param callable                     $ownerResolver  callable(int $id): ImageOwnerInterface
@@ -84,6 +89,10 @@ final class ImageActionsMap
                 'class'         => SetNewSortAction::class,
                 'imageClass'    => $imageClass,
                 'ownerResolver' => $ownerResolver,
+            ],
+            'regenerate-thumbs' => [
+                'class'      => RegenerateThumbsAction::class,
+                'imageClass' => $imageClass,
             ],
         ];
     }

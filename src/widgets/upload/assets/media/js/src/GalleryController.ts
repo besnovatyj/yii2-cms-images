@@ -11,6 +11,14 @@ import type {UploadStatus} from "@/types";
 
 // GalleryController
 export default class GalleryController {
+    /** Интервал перезапроса списка, пока превью генерируются в фоне, мс */
+    private static readonly PREVIEW_POLL_INTERVAL = 3000;
+    /** Сколько раз перезапрашивать, прежде чем перестать ждать (≈1 минута) */
+    private static readonly PREVIEW_POLL_LIMIT = 20;
+
+    private previewPollTimer: number | null = null;
+    private previewPollCount = 0;
+
     constructor(
         private model: GalleryState,
         private view: GalleryView,
@@ -26,6 +34,7 @@ export default class GalleryController {
         try {
             this.model.serverImages = await this.service.getImages();
             this.view.render(this.model);
+            this.watchPreviews(true);
         } catch (error: unknown) {
             console.error(error);
             const message = error instanceof Error ? error.message : String(error);
@@ -33,6 +42,60 @@ export default class GalleryController {
         } finally {
             this.view.preloaderAction('stop');
         }
+    }
+
+    /**
+     * Следит за фоновой генерацией превью: пока есть изображения без готового превью,
+     * периодически перезапрашивает список. Плитки таких изображений показывают оригинал
+     * и отметку «Превью готовится».
+     *
+     * Ожидание ограничено {@link PREVIEW_POLL_LIMIT} запросами: если превью так и не появились,
+     * сбой генерации виден в журнале модуля загрузок, а виджет перестаёт нагружать сервер.
+     *
+     * @param restart начать отсчёт заново (после загрузки новых файлов или первого получения списка)
+     */
+    private watchPreviews(restart: boolean = false): void {
+        if (restart) {
+            this.previewPollCount = 0;
+        }
+        if (this.previewPollTimer !== null) {
+            window.clearTimeout(this.previewPollTimer);
+            this.previewPollTimer = null;
+        }
+        if (!this.model.serverImages.some(img => !img.previewReady)) {
+            return;
+        }
+        if (this.previewPollCount >= GalleryController.PREVIEW_POLL_LIMIT) {
+            return;
+        }
+
+        this.previewPollTimer = window.setTimeout(() => {
+            this.previewPollTimer = null;
+            void this.pollPreviews();
+        }, GalleryController.PREVIEW_POLL_INTERVAL);
+    }
+
+    /**
+     * Один перезапрос списка. Во время загрузки и в режимах выделения/сортировки список
+     * не подменяется — чтобы не сбить действия пользователя; попытка откладывается.
+     */
+    private async pollPreviews(): Promise<void> {
+        if (this.model.isUploading || this.model.uiMode !== 'normal') {
+            this.watchPreviews();
+            return;
+        }
+
+        this.previewPollCount++;
+        try {
+            this.model.serverImages = await this.service.getImages();
+            this.view.render(this.model);
+        } catch (error: unknown) {
+            // Ожидание прекращается после первой ошибки, поэтому уведомление показывается один раз.
+            const message = error instanceof Error ? error.message : String(error);
+            this.view.notify({type: 'warning', title: 'Не удалось обновить статус превью', message});
+            return;
+        }
+        this.watchPreviews();
     }
 
     private setupEventListeners() {
@@ -194,6 +257,7 @@ export default class GalleryController {
             this.model.clearUploadImages();
             this.model.isUploading = false;
             this.view.render(this.model);
+            this.watchPreviews(true);
 
             if (result.failed.length === 0) {
                 this.view.notify({type: 'success', message: 'Все файлы успешно загружены'});

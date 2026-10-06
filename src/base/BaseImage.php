@@ -90,10 +90,11 @@ abstract class BaseImage extends ActiveRecord
      * Конфигурация профилей миниатюр для UploadBehavior.
      *
      * Ключ массива — имя профиля; значение маппится в {@see ThumbnailProfile}:
-     * `width`/`height` обязательны, `quality` (по умолчанию 80) и `mode`
-     * ({@see ThumbnailMode}, по умолчанию Resize) — опциональны.
+     * `width`/`height` обязательны, `quality` (по умолчанию 80), `mode`
+     * ({@see ThumbnailMode}, по умолчанию Resize) и `format` (webp/avif/…, по умолчанию
+     * формат оригинала) — опциональны.
      *
-     * @return array<string, array{width: int, height: int, quality?: int, mode?: ThumbnailMode}>
+     * @return array<string, array{width: int, height: int, quality?: int, mode?: ThumbnailMode, format?: string}>
      */
     abstract protected static function getThumbProfiles(): array;
 
@@ -136,6 +137,7 @@ abstract class BaseImage extends ActiveRecord
                 height: $config['height'],
                 quality: $config['quality'] ?? 80,
                 mode: $config['mode'] ?? ThumbnailMode::Resize,
+                format: $config['format'] ?? null,
             );
         }
 

@@ -129,6 +129,7 @@ class ArticleController extends Controller
                     'get-images'     => ['POST'],
                     'set-main-image' => ['POST'],
                     'set-new-sort'   => ['POST'],
+                    'regenerate-thumbs' => ['POST'],
                 ],
             ],
         ];
@@ -230,6 +231,16 @@ src/
 | `get-images`     | `GetImagesForm[id]`                                      | Получить список изображений |
 | `set-main-image` | `SetMainImageForm[id]`, `SetMainImageForm[imageId]`      | Установить главное          |
 | `set-new-sort`   | `SetNewSortForm[id]`, `SetNewSortForm[sortOrder]` (JSON) | Обновить порядок            |
+| `regenerate-thumbs` | `force` (необязательно: `1` — пересоздать все превью) | Прогрев превью всех изображений модуля через очередь |
+
+`regenerate-thumbs` ставит в очередь одно задание и отвечает сразу; ошибки — нативным ErrorHandler
+(HTTP 4xx/5xx + JSON-тело Yii). Кнопки для страницы списка сущностей:
+
+```php
+use Besnovatyj\Images\widgets\regenerate\RegenerateThumbsButton;
+
+<?= RegenerateThumbsButton::widget(['url' => ['regenerate-thumbs']]) ?>
+```
 
 Формат ответа:
 
@@ -258,6 +269,7 @@ src/
             "sort": 0,
             "fileName": "photo.jpg",
             "previewUrl": "...",
+            "previewReady": true,
             "srcUrl": "...",
             "isMain": true
         }
@@ -267,13 +279,16 @@ src/
 
 ---
 
+Пока превью генерируется в фоне, `previewUrl` указывает на оригинал, а `previewReady = false`:
+виджет показывает на плитке «Превью готовится» и перезапрашивает список (до ~1 минуты).
+
 ## BaseImage: параметры конфигурации
 
 | Метод                  | Возвращает | Описание                                      |
 |------------------------|------------|-----------------------------------------------|
 | `getParentAttribute()` | `string`   | Имя FK-атрибута (`gallery_id`, `person_id`)   |
 | `getStorageName()`     | `string`   | Поддиректория хранилища (`Gallery`, `Person`) |
-| `getThumbProfiles()`   | `array`    | Профили миниатюр для UploadBehavior           |
+| `getThumbProfiles()`   | `array`    | Профили миниатюр для UploadBehavior (`width`, `height`, необязательно `quality`, `mode`, `format`) |
 | `tableName()`          | `string`   | Имя таблицы БД                                |
 
 Публичные методы:
